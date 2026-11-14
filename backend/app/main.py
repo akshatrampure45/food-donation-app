@@ -17,10 +17,21 @@ def seed_admin():
         return
     db = SessionLocal()
     try:
-        email = settings.ADMIN_EMAIL.lower()
-        if not db.query(User).filter(User.email == email).first():
+        email = settings.ADMIN_EMAIL.strip().strip("<>").lower()
+        password = settings.ADMIN_PASSWORD.strip()
+        admin = db.query(User).filter(User.role == UserRole.admin).first()
+        if admin:
+            clash = db.query(User).filter(User.email == email, User.id != admin.id).first()
+            if clash:
+                print(f"Admin email {email} is already used by another account. Admin not updated.")
+                return
+            admin.email = email
+            admin.password_hash = hash_password(password)
+            db.commit()
+            print(f"Admin account updated: {email}")
+        else:
             db.add(User(role=UserRole.admin, name="Admin", email=email, phone="0000000000",
-                        password_hash=hash_password(settings.ADMIN_PASSWORD),
+                        password_hash=hash_password(password),
                         phone_verified=True, email_verified=True))
             db.commit()
             print(f"Admin account created: {email}")
